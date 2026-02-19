@@ -1,21 +1,72 @@
 const express = require('express');
 const router = express.Router();
-const { metricCards, chartData, campaigns, channelPerformance } = require('../data/mockData');
+const { Op } = require('sequelize');
+const Campaign = require('../models/Campaign');
 
 // @desc    Get all metric cards
 // @route   GET /api/campaigns/metrics
 // @access  Public
-router.get('/metrics', (req, res) => {
+router.get('/metrics', async (req, res) => {
   try {
+    // Get real data from database
+    const campaigns = await Campaign.findAll();
+    
+    if (campaigns.length === 0) {
+      return res.json({
+        success: true,
+        data: {
+          totalUsers: 0,
+          revenue: 0,
+          conversionRate: 0,
+          activeSessions: 0,
+          metrics: []
+        },
+        message: 'No campaign data available'
+      });
+    }
+
+    // Calculate real metrics from database
+    const totalRevenue = campaigns.reduce((sum, campaign) => sum + parseFloat(campaign.revenue || 0), 0);
+    const totalSpend = campaigns.reduce((sum, campaign) => sum + parseFloat(campaign.spend || 0), 0);
+    const totalImpressions = campaigns.reduce((sum, campaign) => sum + parseInt(campaign.impressions || 0), 0);
+    const totalClicks = campaigns.reduce((sum, campaign) => sum + parseInt(campaign.clicks || 0), 0);
+    const totalConversions = campaigns.reduce((sum, campaign) => sum + parseInt(campaign.conversions || 0), 0);
+    
+    const conversionRate = totalClicks > 0 ? ((totalConversions / totalClicks) * 100).toFixed(2) : 0;
+    const roas = totalSpend > 0 ? (totalRevenue / totalSpend).toFixed(2) : 0;
+    
+    const realMetrics = {
+      totalUsers: totalConversions,
+      revenue: totalRevenue,
+      conversionRate: conversionRate,
+      activeSessions: totalClicks,
+      totalCampaigns: campaigns.length,
+      totalSpend: totalSpend,
+      totalImpressions: totalImpressions,
+      roas: roas,
+      metrics: campaigns.map(campaign => ({
+        id: campaign.id,
+        name: campaign.campaign_name,
+        channel: campaign.channel,
+        revenue: parseFloat(campaign.revenue || 0),
+        spend: parseFloat(campaign.spend || 0),
+        conversions: parseInt(campaign.conversions || 0),
+        clicks: parseInt(campaign.clicks || 0),
+        impressions: parseInt(campaign.impressions || 0),
+        roas: campaign.spend > 0 ? (campaign.revenue / campaign.spend).toFixed(2) : 0
+      }))
+    };
+
     res.json({
       success: true,
-      data: metricCards,
-      count: metricCards.length
+      data: realMetrics,
+      count: campaigns.length
     });
   } catch (error) {
+    console.error('Database error:', error);
     res.status(500).json({
       success: false,
-      error: 'Failed to fetch metrics'
+      error: 'Failed to fetch metrics from database'
     });
   }
 });
@@ -41,29 +92,58 @@ router.get('/chart-data', (req, res) => {
   }
 });
 
-// @desc    Get all campaigns
+// @desc    Get all campaigns from database
 // @route   GET /api/campaigns
 // @access  Public
-router.get('/', (req, res) => {
+router.get('/', async (req, res) => {
   try {
-    const { status, channel, limit, offset } = req.query;
+    const { status, channel, limit = 50, offset = 0 } = req.query;
+    
+    // Build where clause
+    const whereClause = {};
+    if (status) {
+      whereClause.status = status.toLowerCase();
+    }
+    if (channel) {
+      whereClause.channel = { [Op.iLike]: `%${channel}%` };
+    }
+
+    // Get campaigns from database
+    const { count, rows } = await Campaign.findAndCountAll({
+      where: whereClause,
+      limit: parseInt(limit),
+      offset: parseInt(offset),
+      order: [['created_at', 'DESC']]
+    });
+
+    res.json({
+      success: true,
+      data: rows,
+      pagination: {
+        total: count,
+        count: rows.length,
+        offset: parseInt(offset),
+        limit: parseInt(limit)
+      }
+    });
+  } catch (error) {
+    console.error('Database error:', error);
+    
+    // Fallback to mock data if database fails
     let filteredCampaigns = [...campaigns];
 
-    // Filter by status
     if (status) {
       filteredCampaigns = filteredCampaigns.filter(campaign => 
         campaign.status.toLowerCase() === status.toLowerCase()
       );
     }
 
-    // Filter by channel
     if (channel) {
       filteredCampaigns = filteredCampaigns.filter(campaign => 
         campaign.channel.toLowerCase().includes(channel.toLowerCase())
       );
     }
 
-    // Pagination
     const startIndex = parseInt(offset) || 0;
     const endIndex = limit ? startIndex + parseInt(limit) : filteredCampaigns.length;
     const paginatedCampaigns = filteredCampaigns.slice(startIndex, endIndex);
@@ -76,12 +156,8 @@ router.get('/', (req, res) => {
         count: paginatedCampaigns.length,
         offset: startIndex,
         limit: parseInt(limit) || filteredCampaigns.length
-      }
-    });
-  } catch (error) {
-    res.status(500).json({
-      success: false,
-      error: 'Failed to fetch campaigns'
+      },
+      note: 'Using mock data - database connection failed'
     });
   }
 });

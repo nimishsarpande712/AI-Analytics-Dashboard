@@ -1,50 +1,59 @@
 const express = require('express');
 const router = express.Router();
+const Campaign = require('../models/Campaign');
+const { Op } = require('sequelize');
 
 // @desc    Get all reports
 // @route   GET /api/reports
 // @access  Public
 router.get('/', async (req, res) => {
   try {
-    // Mock reports data
+    // Get campaign count to generate dynamic reports
+    const campaignCount = await Campaign.count();
+    const latestCampaigns = await Campaign.findAll({
+      limit: 5,
+      order: [['createdAt', 'DESC']]
+    });
+
+    // Generate reports based on real data
     const reports = [
       {
         id: 1,
-        name: 'User Acquisition Report',
-        type: 'acquisition',
-        date: '2025-07-29',
+        name: 'Campaign Performance Report',
+        type: 'performance',
+        date: new Date().toISOString().split('T')[0],
         status: 'ready',
-        description: 'Comprehensive analysis of user acquisition channels',
+        description: `Analysis of ${campaignCount} active campaigns and their performance metrics`,
         fileSize: '2.4 MB',
         format: 'PDF'
       },
       {
         id: 2,
-        name: 'Revenue Analysis',
+        name: 'Revenue Analysis Report',
         type: 'revenue',
-        date: '2025-07-28',
-        status: 'processing',
-        description: 'Monthly revenue breakdown and trend analysis',
+        date: new Date(Date.now() - 86400000).toISOString().split('T')[0], // Yesterday
+        status: 'ready',
+        description: `Revenue breakdown and trend analysis from campaign data`,
         fileSize: '1.8 MB',
         format: 'Excel'
       },
       {
         id: 3,
-        name: 'Customer Behavior Report',
-        type: 'behavior',
-        date: '2025-07-27',
+        name: 'Channel Performance Report',
+        type: 'channels',
+        date: new Date(Date.now() - 2 * 86400000).toISOString().split('T')[0], // 2 days ago
         status: 'ready',
-        description: 'In-depth customer behavior and engagement analysis',
+        description: `Performance comparison across different marketing channels`,
         fileSize: '3.1 MB',
         format: 'PDF'
       },
       {
         id: 4,
-        name: 'Marketing Campaign Analysis',
-        type: 'marketing',
-        date: '2025-07-26',
+        name: 'ROAS Analysis Report',
+        type: 'roas',
+        date: new Date(Date.now() - 3 * 86400000).toISOString().split('T')[0], // 3 days ago
         status: 'ready',
-        description: 'Performance analysis of recent marketing campaigns',
+        description: `Return on Ad Spend analysis for all active campaigns`,
         fileSize: '1.9 MB',
         format: 'PDF'
       }
@@ -53,12 +62,15 @@ router.get('/', async (req, res) => {
     res.json({
       success: true,
       data: reports,
-      count: reports.length
+      count: reports.length,
+      basedOnCampaigns: campaignCount,
+      latestCampaigns: latestCampaigns.map(c => c.campaign_name)
     });
   } catch (error) {
+    console.error('Reports error:', error);
     res.status(500).json({
       success: false,
-      error: 'Failed to fetch reports'
+      error: 'Failed to fetch reports from database'
     });
   }
 });
@@ -70,27 +82,41 @@ router.post('/generate', async (req, res) => {
   try {
     const { reportType, timeRange, includeCharts, format } = req.body;
     
-    // Mock report generation
+    // Get real campaign data for report generation
+    const campaigns = await Campaign.findAll();
+    const campaignCount = campaigns.length;
+    const totalRevenue = campaigns.reduce((sum, campaign) => sum + parseFloat(campaign.revenue || 0), 0);
+    const totalSpend = campaigns.reduce((sum, campaign) => sum + parseFloat(campaign.spend || 0), 0);
+    
+    // Generate report based on real data
     const newReport = {
       id: Date.now(),
-      name: `${reportType} Report`,
-      type: reportType,
+      name: `${reportType || 'Performance'} Report`,
+      type: reportType || 'performance',
       date: new Date().toISOString().split('T')[0],
       status: 'processing',
-      description: `Generated ${reportType} report for ${timeRange}`,
+      description: `Generated ${reportType || 'performance'} report for ${timeRange || 'last 30 days'} - ${campaignCount} campaigns, $${totalRevenue.toLocaleString()} revenue`,
       format: format || 'PDF',
-      estimatedTime: '5-10 minutes'
+      estimatedTime: '3-5 minutes',
+      dataSource: 'database',
+      campaignCount: campaignCount,
+      metrics: {
+        totalRevenue: totalRevenue,
+        totalSpend: totalSpend,
+        roas: totalSpend > 0 ? (totalRevenue / totalSpend).toFixed(2) : 0
+      }
     };
 
     res.status(201).json({
       success: true,
-      message: 'Report generation started',
+      message: 'Report generation started with real campaign data',
       data: newReport
     });
   } catch (error) {
+    console.error('Report generation error:', error);
     res.status(500).json({
       success: false,
-      error: 'Failed to generate report'
+      error: 'Failed to generate report from database'
     });
   }
 });
@@ -102,42 +128,71 @@ router.get('/:id', async (req, res) => {
   try {
     const { id } = req.params;
     
-    // Mock report data
+    // Get real campaign data for report content
+    const campaigns = await Campaign.findAll();
+    const totalRevenue = campaigns.reduce((sum, campaign) => sum + parseFloat(campaign.revenue || 0), 0);
+    const totalSpend = campaigns.reduce((sum, campaign) => sum + parseFloat(campaign.spend || 0), 0);
+    const totalConversions = campaigns.reduce((sum, campaign) => sum + parseInt(campaign.conversions || 0), 0);
+    const totalClicks = campaigns.reduce((sum, campaign) => sum + parseInt(campaign.clicks || 0), 0);
+    
+    const avgRoas = totalSpend > 0 ? (totalRevenue / totalSpend).toFixed(2) : 0;
+    const conversionRate = totalClicks > 0 ? ((totalConversions / totalClicks) * 100).toFixed(2) : 0;
+    
+    // Top performing campaigns
+    const topCampaigns = campaigns
+      .sort((a, b) => parseFloat(b.revenue || 0) - parseFloat(a.revenue || 0))
+      .slice(0, 3)
+      .map(c => c.campaign_name);
+    
     const report = {
       id: parseInt(id),
-      name: 'Sample Report',
-      type: 'general',
-      date: '2025-07-29',
+      name: 'Campaign Performance Report',
+      type: 'performance',
+      date: new Date().toISOString().split('T')[0],
       status: 'ready',
       content: {
-        executiveSummary: 'This month showed significant growth across all key metrics with user acquisition up 25% and revenue increasing by 18%.',
+        executiveSummary: `Analysis of ${campaigns.length} active campaigns shows total revenue of $${totalRevenue.toLocaleString()} with an average ROAS of ${avgRoas}x. Conversion rate stands at ${conversionRate}%.`,
         keyAchievements: [
-          'Exceeded monthly revenue target by 15%',
-          'Improved customer satisfaction score to 4.8/5',
-          'Reduced churn rate by 12%'
+          `Generated $${totalRevenue.toLocaleString()} in total revenue`,
+          `Achieved ${totalConversions.toLocaleString()} total conversions`,
+          `Average ROAS of ${avgRoas}x across all campaigns`,
+          `Top performing campaigns: ${topCampaigns.join(', ')}`
         ],
         improvements: [
-          'Mobile conversion rate needs optimization',
-          'Customer acquisition cost trending upward',
-          'Support response time above target'
+          totalSpend > totalRevenue ? 'Overall spend exceeds revenue - optimize underperforming campaigns' : 'Revenue exceeds spend - good profitability',
+          parseFloat(conversionRate) < 2 ? 'Conversion rate below 2% - consider landing page optimization' : 'Conversion rate is healthy',
+          campaigns.length < 5 ? 'Consider expanding campaign portfolio' : 'Good campaign diversity'
         ],
         metrics: {
-          totalUsers: 12543,
-          revenue: 45231,
-          conversionRate: 3.24,
-          churnRate: 2.1
-        }
+          totalCampaigns: campaigns.length,
+          totalRevenue: totalRevenue,
+          totalSpend: totalSpend,
+          conversionRate: parseFloat(conversionRate),
+          averageRoas: parseFloat(avgRoas),
+          totalConversions: totalConversions,
+          totalClicks: totalClicks
+        },
+        campaignBreakdown: campaigns.map(campaign => ({
+          name: campaign.campaign_name,
+          channel: campaign.channel,
+          revenue: parseFloat(campaign.revenue || 0),
+          spend: parseFloat(campaign.spend || 0),
+          roas: campaign.spend > 0 ? (campaign.revenue / campaign.spend).toFixed(2) : 0,
+          conversions: parseInt(campaign.conversions || 0)
+        }))
       }
     };
 
     res.json({
       success: true,
-      data: report
+      data: report,
+      generatedFrom: 'database'
     });
   } catch (error) {
+    console.error('Report fetch error:', error);
     res.status(500).json({
       success: false,
-      error: 'Failed to fetch report'
+      error: 'Failed to fetch report from database'
     });
   }
 });

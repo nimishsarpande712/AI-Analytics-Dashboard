@@ -8,7 +8,11 @@
     "dev": "nodemon server.js",
     "production": "node server.js",
     "test": "jest",
-    "lint": "eslint ."
+    "lint": "eslint .",
+    "seed:campaigns": "node seeders/campaignSeeder.js",
+    "db:seed": "node seeders/campaignSeeder.js seed",
+    "db:clear": "node seeders/campaignSeeder.js clear",
+    "db:stats": "node seeders/campaignSeeder.js stats"
   },
   "keywords": [
     "analytics",
@@ -20,25 +24,40 @@
   "author": "Your Name",
   "license": "MIT",
   "dependencies": {
-    "express": "^4.18.2",
-    "cors": "^2.8.5",
-    "helmet": "^7.0.0",
-    "morgan": "^1.10.0",
-    "dotenv": "^16.3.1",
-    "mongoose": "^7.4.1",
+    "@google-analytics/data": "^5.2.0",
+    "bcrypt": "^6.0.0",
     "bcryptjs": "^2.4.3",
-    "jsonwebtoken": "^9.0.1",
-    "express-rate-limit": "^6.8.1",
-    "compression": "^1.7.4",
-    "express-validator": "^7.0.1",
+    "compression": "^1.8.1",
+    "cookie-parser": "^1.4.7",
+    "cors": "^2.8.5",
+    "cron": "^4.3.2",
+    "csv-parser": "^3.2.0",
+    "dotenv": "^16.6.1",
+    "express": "^4.21.2",
+    "express-rate-limit": "^6.11.2",
+    "express-validator": "^7.2.1",
+    "facebook-nodejs-business-sdk": "^23.0.1",
+    "google-ads-api": "^20.0.1",
+    "helmet": "^7.2.0",
+    "json2csv": "^6.0.0-alpha.2",
+    "jsonwebtoken": "^9.0.2",
+    "morgan": "^1.10.1",
     "multer": "^1.4.5-lts.1",
+    "mysql2": "^3.14.3",
+    "node-cache": "^5.1.2",
     "node-cron": "^3.0.2",
-    "socket.io": "^4.7.2"
+    "redis": "^5.6.1",
+    "sequelize": "^6.37.7",
+    "socket.io": "^4.7.4",
+    "sequelize-cli": "^6.6.1",
+    "socket.io": "^4.7.2",
+    "winston": "^3.17.0",
+    "ws": "^8.18.3"
   },
   "devDependencies": {
-    "nodemon": "^3.0.1",
+    "eslint": "^8.45.0",
     "jest": "^29.6.1",
-    "supertest": "^6.3.3",
-    "eslint": "^8.45.0"
+    "nodemon": "^3.0.1",
+    "supertest": "^6.3.3"
   }
 }

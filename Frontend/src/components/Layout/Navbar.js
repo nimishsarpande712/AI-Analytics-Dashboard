@@ -1,39 +1,70 @@
 import React from 'react';
 import { BellIcon, MagnifyingGlassIcon, UserCircleIcon } from '@heroicons/react/24/outline';
+import './Layout.css';
 
 const Navbar = () => {
   return (
-    <nav className="bg-white shadow-sm border-b border-gray-200 px-6 py-4">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center space-x-4">
-          <h1 className="text-2xl font-bold text-gray-900">AI Analytics Dashboard</h1>
+    <nav className="navbar">
+      <div className="navbar-container">
+        <div className="navbar-left">
+          <h1 className="navbar-title">AI Analytics Dashboard</h1>
         </div>
         
-        <div className="flex items-center space-x-4">
+        <div className="navbar-right">
           {/* Search Bar */}
-          <div className="relative">
-            <MagnifyingGlassIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+          <div style={{ position: 'relative' }}>
+            <MagnifyingGlassIcon style={{ 
+              position: 'absolute', 
+              left: '12px', 
+              top: '50%', 
+              transform: 'translateY(-50%)', 
+              width: '20px', 
+              height: '20px', 
+              color: '#9ca3af' 
+            }} />
             <input
               type="text"
               placeholder="Search..."
-              className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              style={{
+                paddingLeft: '40px',
+                paddingRight: '16px',
+                paddingTop: '8px',
+                paddingBottom: '8px',
+                border: '1px solid #d1d5db',
+                borderRadius: '8px',
+                fontSize: '14px',
+                outline: 'none'
+              }}
             />
           </div>
           
           {/* Notifications */}
-          <button className="relative p-2 text-gray-600 hover:text-gray-900 transition-colors">
-            <BellIcon className="w-6 h-6" />
-            <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
+          <button className="icon-button" style={{ position: 'relative' }}>
+            <BellIcon className="icon" />
+            <span style={{
+              position: 'absolute',
+              top: '-2px',
+              right: '-2px',
+              backgroundColor: '#ef4444',
+              color: 'white',
+              fontSize: '12px',
+              borderRadius: '50%',
+              width: '20px',
+              height: '20px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center'
+            }}>
               3
             </span>
           </button>
           
           {/* User Profile */}
-          <div className="flex items-center space-x-2">
-            <UserCircleIcon className="w-8 h-8 text-gray-600" />
-            <div className="hidden md:block">
-              <p className="text-sm font-medium text-gray-900">John Doe</p>
-              <p className="text-xs text-gray-500">Admin</p>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <UserCircleIcon style={{ width: '32px', height: '32px', color: '#6b7280' }} />
+            <div>
+              <p style={{ fontSize: '14px', fontWeight: '500', color: '#1f2937', margin: 0 }}>John Doe</p>
+              <p style={{ fontSize: '12px', color: '#6b7280', margin: 0 }}>Admin</p>
             </div>
           </div>
         </div>
